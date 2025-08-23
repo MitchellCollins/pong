@@ -226,6 +226,16 @@ export default function Home() {
         }
       }
 
+      function capPongYVelocity(velocity) {
+        // Checks if velocity is positive
+        if (velocity > 0) {
+          return Math.min(speed, velocity);
+        }
+        
+        // Handles negative velocity
+        return Math.max(-speed, velocity);
+      }
+
       function collisionHandling() {
         // Checks Collisions
         // With Player 1
@@ -240,6 +250,8 @@ export default function Home() {
           pongVelocity.x *= -1;
           // Update pong y velocity based off player y velocity 
           pongVelocity.y += player1YVelocity;
+          // Caps pong y velocity to speed constant
+          pongVelocity.y = capPongYVelocity(pongVelocity.y);
         }
 
         // With Player 2
@@ -252,6 +264,7 @@ export default function Home() {
           beep.play();
           pongVelocity.x *= -1;
           pongVelocity.y += player2YVelocity;
+          pongVelocity.y = capPongYVelocity(pongVelocity.y);
         }
 
         // Top and bottom boundaries
