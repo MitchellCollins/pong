@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Determines if is being runned in production
 const isProd = process.env.NODE_ENV === "production";
@@ -12,6 +12,8 @@ function resolveSRCPath(path) {
 
 export default function Home() {
   const canvasRef = useRef();
+  const [running, setRunning] = useState(false);
+  const [winner, setWinner] = useState();
 
   // Global Constants
   const fps = 30;
@@ -22,6 +24,7 @@ export default function Home() {
   const player1XPosition = boardWidth / 10;
   const player2XPosition = boardWidth - boardWidth / 10;
   const pongSize = 20;
+  const maxScore = 10;
 
   // Initial Variable Values
   const initialValues = {
@@ -89,23 +92,6 @@ export default function Home() {
     }
   }
 
-  // Starts Pong
-  function createStartTimeout() { 
-    setTimeout(() => {
-      pongVelocity.x = -speed;
-    }, 3000);
-  }
-
-  function nextGame() {
-    player1YPosition = initialValues.player1YPosition;
-    player2YPosition = initialValues.player2YPosition;
-    player1YVelocity = initialValues.player1YVelocity;
-    player2YVelocity = initialValues.player2YVelocity;
-    pongPosition = initialValues.getPongPosition();
-    pongVelocity = initialValues.getPongVelocity();
-    createStartTimeout();
-  }
-
   useEffect(() => {
     if (!canvasRef.current) return null;
     
@@ -117,6 +103,46 @@ export default function Home() {
     beep.volume = 0.3;
     const goal = new Audio(resolveSRCPath("/pong_goal.wav"));
     goal.volume = 0.6;
+
+    function setTextOptions() {
+      context.fillStyle = "#fff";
+      context.font = "30px Ariel";
+    }
+
+    // Starts Pong
+    function createStartCountdown() { 
+      return new Promise((resolve) => {
+        context.reset();
+        
+        setTextOptions();
+        context.fillText("3", boardWidth / 2, boardHeight / 2);
+
+        setTimeout(() => {
+          context.reset();
+          setTextOptions();
+          context.fillText("2", boardWidth / 2, boardHeight / 2);
+        }, 1000);
+
+        setTimeout(() => {
+          context.reset();
+          setTextOptions();
+          context.fillText("1", boardWidth / 2, boardHeight / 2);
+        }, 2000);
+        
+        setTimeout(() => {
+          // Clears countdown
+          context.reset();
+          
+          // Player Control Event Listeners
+          window.addEventListener("keydown", handleKeyDown);
+          window.addEventListener("keyup", handleKeyUp);
+          
+          pongVelocity.x = -speed;
+
+          resolve();
+        }, 3000);
+      });
+    }
 
     function drawPlayer(x, y) {
       context.beginPath();
@@ -157,74 +183,7 @@ export default function Home() {
       drawPlayer(player2XPosition, player2YPosition);
     }
 
-    function collisionHandling() {
-      // Checks Collisions
-      // With Player 1
-      if (
-        // X axis
-        pongPosition.x <= player1XPosition && pongPosition.x + pongSize > player1XPosition &&
-        // Y axis
-        pongPosition.y <= player1YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player1YPosition - (playerSize / 2)
-      ) {
-        beep.play();
-        // Reflects x velocity
-        pongVelocity.x *= -1;
-        // Update pong y velocity based off player y velocity 
-        pongVelocity.y += player1YVelocity;
-      }
-
-      // With Player 2
-      else if (
-        // X axis
-        pongPosition.x <= player2XPosition && pongPosition.x + pongSize > player2XPosition &&
-        // Y axis
-        pongPosition.y <= player2YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player2YPosition - (playerSize / 2)
-      ) {
-        beep.play();
-        pongVelocity.x *= -1;
-        pongVelocity.y += player2YVelocity;
-      }
-
-      // Top and bottom boundaries
-      else if (pongPosition.y <= 0 || pongPosition.y + pongSize >= boardHeight) {
-        beep.play();
-        pongVelocity.y *= -1;
-      }
-
-      // Right boundary
-      if (pongPosition.x + pongSize >= boardWidth) {
-        goal.play();
-        nextGame();
-        player1Score++;
-      }
-
-      // Left boundary
-      else if (pongPosition.x <= 0) {
-        goal.play();
-        nextGame();
-        player2Score++;
-      }
-
-      // Player 1
-      if (player1YPosition - playerSize / 2 <= 0) {
-        player1YPosition = playerSize / 2;
-      } else if (player1YPosition + playerSize / 2 >= boardHeight) {
-        player1YPosition = boardHeight - playerSize / 2;
-      }
-
-      // Player 2
-      if (player2YPosition - playerSize / 2 <= 0) {
-        player2YPosition = playerSize / 2;
-      } else if (player2YPosition + playerSize / 2 >= boardHeight) {
-        player2YPosition = boardHeight - playerSize / 2;
-      }
-    }
-
     function game() {
-      // Player Control Event Listeners
-      window.addEventListener("keydown", handleKeyDown);
-      window.addEventListener("keyup", handleKeyUp);
-      
       const loop = setInterval(() => {
         // Updates Players
         player1YPosition += player1YVelocity;
@@ -238,16 +197,151 @@ export default function Home() {
 
         collisionHandling();
       }, 1000 / fps);
+
+      function finishGame(winner) {
+        clearInterval(loop);
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+        setRunning(false);
+        setWinner(winner);
+      }
+
+      function nextGame() {
+        // Checks if someone has won
+        if (player1Score >= maxScore)
+          finishGame(1);
+
+        else if (player2Score >= maxScore)
+          finishGame(2);
+        
+        // If no winner then next game is setup
+        else {
+          player1YPosition = initialValues.player1YPosition;
+          player2YPosition = initialValues.player2YPosition;
+          player1YVelocity = initialValues.player1YVelocity;
+          player2YVelocity = initialValues.player2YVelocity;
+          pongPosition = initialValues.getPongPosition();
+          pongVelocity = initialValues.getPongVelocity();
+          pongVelocity.x = -speed;
+        }
+      }
+
+      function collisionHandling() {
+        // Checks Collisions
+        // With Player 1
+        if (
+          // X axis
+          pongPosition.x <= player1XPosition && pongPosition.x + pongSize > player1XPosition &&
+          // Y axis
+          pongPosition.y <= player1YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player1YPosition - (playerSize / 2)
+        ) {
+          beep.play();
+          // Reflects x velocity
+          pongVelocity.x *= -1;
+          // Update pong y velocity based off player y velocity 
+          pongVelocity.y += player1YVelocity;
+        }
+
+        // With Player 2
+        else if (
+          // X axis
+          pongPosition.x <= player2XPosition && pongPosition.x + pongSize > player2XPosition &&
+          // Y axis
+          pongPosition.y <= player2YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player2YPosition - (playerSize / 2)
+        ) {
+          beep.play();
+          pongVelocity.x *= -1;
+          pongVelocity.y += player2YVelocity;
+        }
+
+        // Top and bottom boundaries
+        else if (pongPosition.y <= 0 || pongPosition.y + pongSize >= boardHeight) {
+          beep.play();
+          pongVelocity.y *= -1;
+        }
+
+        // Right boundary
+        if (pongPosition.x + pongSize >= boardWidth) {
+          goal.play();
+          player1Score++;
+          nextGame();
+        }
+
+        // Left boundary
+        else if (pongPosition.x <= 0) {
+          goal.play();
+          player2Score++;
+          nextGame();
+        }
+
+        // Player 1
+        if (player1YPosition - playerSize / 2 <= 0) {
+          player1YPosition = playerSize / 2;
+        } else if (player1YPosition + playerSize / 2 >= boardHeight) {
+          player1YPosition = boardHeight - playerSize / 2;
+        }
+
+        // Player 2
+        if (player2YPosition - playerSize / 2 <= 0) {
+          player2YPosition = playerSize / 2;
+        } else if (player2YPosition + playerSize / 2 >= boardHeight) {
+          player2YPosition = boardHeight - playerSize / 2;
+        }
+      }
     }
 
-    createStartTimeout();
+    async function startGame() {
+      await createStartCountdown();
+      game();
+    }
 
-    game();
-  }, []);
+    if (running) 
+      startGame();
+  }, [running]);
   
   return (
     <div style={{ display: "flex", justifyContent: "center" }}>
       <canvas ref={canvasRef} width={boardWidth} height={boardHeight} style={{ backgroundColor: "#000" }} />
+
+      {/* Start Menu */}
+      <div hidden={running || winner} style={{ position: "absolute", alignSelf: "center", textAlign: "center", color: "#fff" }}>
+        {/* Title */}
+        <h1 style={{ marginTop: 0, marginBottom: 10, fontSize: 60 }}>Pong</h1>
+        
+        {/* Start Game Button */}
+        <button onClick={() => setRunning(true)} style={{  
+          fontSize: 20, 
+          padding: 10, 
+          border: "2px solid #fff",
+          backgroundColor: "inherit",
+          color: "inherit"
+        }}>
+          Start Game!
+        </button>
+      </div>
+
+      {/* Restart Menu */}
+      <div hidden={!winner} style={{ position: "absolute", alignSelf: "center", textAlign: "center", color: "#fff" }}>
+        {/* Title */}
+        <h1>Player {winner} won!</h1>
+
+        {/* Restart Game Button */}
+        <button 
+          onClick={() => { 
+            setWinner(); 
+            setRunning(true) 
+          }} 
+          style={{  
+            fontSize: 20, 
+            padding: 10, 
+            border: "2px solid #fff",
+            backgroundColor: "inherit",
+            color: "inherit"
+          }}
+        >
+          Restart Game!
+        </button>
+      </div>
     </div>
   );
 }
