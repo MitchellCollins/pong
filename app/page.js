@@ -2,6 +2,14 @@
 
 import { useEffect, useRef } from "react";
 
+// Determines if is being runned in production
+const isProd = process.env.NODE_ENV === "production";
+// Used to change src paths when in production
+// Because with github the url is changed as it has an addition /pong as that is its repository
+function resolveSRCPath(path) {
+  return (isProd ? "/pong" : "") + path;
+}
+
 export default function Home() {
   const canvasRef = useRef();
 
@@ -98,69 +106,17 @@ export default function Home() {
     createStartTimeout();
   }
 
-  function collisionHandling() {
-    // Checks Collisions
-    // With Player 1
-    if (
-      // X axis
-      pongPosition.x <= player1XPosition && pongPosition.x + pongSize > player1XPosition &&
-      // Y axis
-      pongPosition.y <= player1YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player1YPosition - (playerSize / 2)
-    ) {
-      // Reflects x velocity
-      pongVelocity.x *= -1;
-      // Update pong y velocity based off player y velocity 
-      pongVelocity.y += player1YVelocity;
-    }
-
-    // With Player 2
-    else if (
-      // X axis
-      pongPosition.x <= player2XPosition && pongPosition.x + pongSize > player2XPosition &&
-      // Y axis
-      pongPosition.y <= player2YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player2YPosition - (playerSize / 2)
-    ) {
-      pongVelocity.x *= -1;
-      pongVelocity.y += player2YVelocity;
-    }
-
-    // Top and bottom boundaries
-    else if (pongPosition.y <= 0 || pongPosition.y + pongSize >= boardHeight) {
-      pongVelocity.y *= -1;
-    }
-
-    // Right boundary
-    if (pongPosition.x + pongSize >= boardWidth) {
-      nextGame();
-      player1Score++;
-    }
-
-    // Left boundary
-    else if (pongPosition.x <= 0) {
-      nextGame();
-      player2Score++;
-    }
-
-    // Player 1
-    if (player1YPosition - playerSize / 2 <= 0) {
-      player1YPosition = playerSize / 2;
-    } else if (player1YPosition + playerSize / 2 >= boardHeight) {
-      player1YPosition = boardHeight - playerSize / 2;
-    }
-
-    // Player 2
-    if (player2YPosition - playerSize / 2 <= 0) {
-      player2YPosition = playerSize / 2;
-    } else if (player2YPosition + playerSize / 2 >= boardHeight) {
-      player2YPosition = boardHeight - playerSize / 2;
-    }
-  }
-
   useEffect(() => {
     if (!canvasRef.current) return null;
     
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
+
+    // Audio
+    const beep = new Audio(resolveSRCPath("/pong_beep.wav"));
+    beep.volume = 0.3;
+    const goal = new Audio(resolveSRCPath("/pong_goal.wav"));
+    goal.volume = 0.6;
 
     function drawPlayer(x, y) {
       context.beginPath();
@@ -199,6 +155,69 @@ export default function Home() {
       drawPlayer(player1XPosition, player1YPosition);
       // Player 2
       drawPlayer(player2XPosition, player2YPosition);
+    }
+
+    function collisionHandling() {
+      // Checks Collisions
+      // With Player 1
+      if (
+        // X axis
+        pongPosition.x <= player1XPosition && pongPosition.x + pongSize > player1XPosition &&
+        // Y axis
+        pongPosition.y <= player1YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player1YPosition - (playerSize / 2)
+      ) {
+        beep.play();
+        // Reflects x velocity
+        pongVelocity.x *= -1;
+        // Update pong y velocity based off player y velocity 
+        pongVelocity.y += player1YVelocity;
+      }
+
+      // With Player 2
+      else if (
+        // X axis
+        pongPosition.x <= player2XPosition && pongPosition.x + pongSize > player2XPosition &&
+        // Y axis
+        pongPosition.y <= player2YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player2YPosition - (playerSize / 2)
+      ) {
+        beep.play();
+        pongVelocity.x *= -1;
+        pongVelocity.y += player2YVelocity;
+      }
+
+      // Top and bottom boundaries
+      else if (pongPosition.y <= 0 || pongPosition.y + pongSize >= boardHeight) {
+        beep.play();
+        pongVelocity.y *= -1;
+      }
+
+      // Right boundary
+      if (pongPosition.x + pongSize >= boardWidth) {
+        goal.play();
+        nextGame();
+        player1Score++;
+      }
+
+      // Left boundary
+      else if (pongPosition.x <= 0) {
+        goal.play();
+        nextGame();
+        player2Score++;
+      }
+
+      // Player 1
+      if (player1YPosition - playerSize / 2 <= 0) {
+        player1YPosition = playerSize / 2;
+      } else if (player1YPosition + playerSize / 2 >= boardHeight) {
+        player1YPosition = boardHeight - playerSize / 2;
+      }
+
+      // Player 2
+      if (player2YPosition - playerSize / 2 <= 0) {
+        player2YPosition = playerSize / 2;
+      } else if (player2YPosition + playerSize / 2 >= boardHeight) {
+        player2YPosition = boardHeight - playerSize / 2;
+      }
     }
 
     function game() {
