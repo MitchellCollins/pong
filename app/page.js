@@ -20,7 +20,8 @@ export default function Home() {
   const boardWidth = 1000;
   const boardHeight = 600;
   const speed = 8;
-  const playerSize = 60;
+  const playerWidth = 10;
+  const playerHeight = 60;
   const player1XPosition = boardWidth / 10;
   const player2XPosition = boardWidth - boardWidth / 10;
   const pongSize = 20;
@@ -145,12 +146,9 @@ export default function Home() {
     }
 
     function drawPlayer(x, y) {
-      context.beginPath();
       // Moves player up half its size
       // So that position is relative to its center
-      context.moveTo(x, y - (playerSize / 2));
-      context.lineTo(x, y + playerSize);
-      context.stroke();
+      context.fillRect(x, y - playerHeight / 2, playerWidth, playerHeight);
     }
 
     function draw() {
@@ -168,7 +166,6 @@ export default function Home() {
       context.moveTo(boardWidth / 2, 0);
       context.lineTo(boardWidth / 2, boardHeight);
       context.stroke();
-      context.setLineDash([]); // Removes dotted pattern
 
       // Scores
       context.fillText(player1Score, boardWidth / 2 - 40, 30); // Player 1
@@ -235,46 +232,57 @@ export default function Home() {
         }
       }
 
-      function capPongYVelocity(velocity) {
-        // Checks if velocity is positive
-        if (velocity > 0) {
-          return Math.min(speed, velocity);
-        }
+      function pongCollidedPlayer(playerVelocity) {
+        beep.play();
+
+        // Reflects x velocity
+        pongVelocity.x *= -1;
+        // Update pong y velocity based off player y velocity 
+        pongVelocity.y += playerVelocity;
         
-        // Handles negative velocity
-        return Math.max(-speed, velocity);
+        // Caps pong y velocity to speed constant
+        // Checks if velocity is positive
+        if (playerVelocity > 0) {
+          pongVelocity.y = Math.min(speed, playerVelocity);
+        } else {
+          // Handles negative velocity
+          pongVelocity.y = Math.max(-speed, playerVelocity);
+        }
+      }
+
+      function playerYCollisionHandler(position, velocity) {
+        // Checks if pong hits front side
+        if (pongPosition.y + pongSize <= position + playerHeight / 2 && pongPosition.y >= position - playerHeight / 2) {
+          pongCollidedPlayer(velocity);
+        }
+
+        // Checks if pong hits top side
+        else if (pongPosition.y <= position - playerHeight / 2 && pongPosition.y + pongSize >= position - playerHeight / 2) {
+          // Positions pong outside of player
+          pongPosition.y = position - playerHeight / 2 - pongSize - 1;
+          pongVelocity.y *= -1;
+
+          pongCollidedPlayer(velocity);
+        }
+
+        // Checks if pong hits bottom side
+        else if (pongPosition.y <= position + playerHeight / 2 && pongPosition.y + pongSize > position - playerHeight / 2) {
+          pongPosition.y = position + playerHeight / 2 + 1;
+          pongVelocity.y *= -1;
+          
+          pongCollidedPlayer(velocity);
+        }
       }
 
       function collisionHandling() {
         // Checks Collisions
-        // With Player 1
-        if (
-          // X axis
-          pongPosition.x <= player1XPosition && pongPosition.x + pongSize > player1XPosition &&
-          // Y axis
-          pongPosition.y <= player1YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player1YPosition - (playerSize / 2)
-        ) {
-          beep.play();
-          // Reflects x velocity
-          pongVelocity.x *= -1;
-          // Update pong y velocity based off player y velocity 
-          pongVelocity.y += player1YVelocity;
-          // Caps pong y velocity to speed constant
-          pongVelocity.y = capPongYVelocity(pongVelocity.y);
-        }
+        // Checks if pong is within x window of player 1
+        if (pongPosition.x <= player1XPosition + playerWidth && pongPosition.x + pongSize >= player1XPosition)
+          playerYCollisionHandler(player1YPosition, player1YVelocity);
 
-        // With Player 2
-        else if (
-          // X axis
-          pongPosition.x <= player2XPosition && pongPosition.x + pongSize > player2XPosition &&
-          // Y axis
-          pongPosition.y <= player2YPosition + (playerSize / 2) && pongPosition.y + pongSize >= player2YPosition - (playerSize / 2)
-        ) {
-          beep.play();
-          pongVelocity.x *= -1;
-          pongVelocity.y += player2YVelocity;
-          pongVelocity.y = capPongYVelocity(pongVelocity.y);
-        }
+        // Checks if pong is within x window of player 2
+        else if (pongPosition.x <= player2XPosition && pongPosition.x + pongSize > player2XPosition)
+          playerYCollisionHandler(player2YPosition, player2YVelocity);
 
         // Top and bottom boundaries
         else if (pongPosition.y <= 0 || pongPosition.y + pongSize >= boardHeight) {
@@ -299,17 +307,17 @@ export default function Home() {
         }
 
         // Player 1
-        if (player1YPosition - playerSize / 2 <= 0) {
-          player1YPosition = playerSize / 2;
-        } else if (player1YPosition + playerSize / 2 >= boardHeight) {
-          player1YPosition = boardHeight - playerSize / 2;
+        if (player1YPosition - playerHeight / 2 <= 0) {
+          player1YPosition = playerHeight / 2;
+        } else if (player1YPosition + playerHeight / 2 >= boardHeight) {
+          player1YPosition = boardHeight - playerHeight / 2;
         }
 
         // Player 2
-        if (player2YPosition - playerSize / 2 <= 0) {
-          player2YPosition = playerSize / 2;
-        } else if (player2YPosition + playerSize / 2 >= boardHeight) {
-          player2YPosition = boardHeight - playerSize / 2;
+        if (player2YPosition - playerHeight / 2 <= 0) {
+          player2YPosition = playerHeight / 2;
+        } else if (player2YPosition + playerHeight / 2 >= boardHeight) {
+          player2YPosition = boardHeight - playerHeight / 2;
         }
       }
     }
