@@ -19,8 +19,8 @@ export default function Home() {
   const fps = 30;
   const boardWidth = 1000;
   const boardHeight = 600;
-  const speed = 4;
-  const playerSize = 50;
+  const speed = 8;
+  const playerSize = 60;
   const player1XPosition = boardWidth / 10;
   const player2XPosition = boardWidth - boardWidth / 10;
   const pongSize = 20;
