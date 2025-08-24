@@ -206,7 +206,7 @@ export default function Home() {
         setWinner(winner);
       }
 
-      function nextGame() {
+      function nextGame(scorer) {
         // Checks if someone has won
         if (player1Score >= maxScore)
           finishGame(1);
@@ -222,7 +222,16 @@ export default function Home() {
           player2YVelocity = initialValues.player2YVelocity;
           pongPosition = initialValues.getPongPosition();
           pongVelocity = initialValues.getPongVelocity();
-          pongVelocity.x = -speed;
+          
+          // Checks if player 1 scored
+          // Only need to change pong position for player 2
+          // As for player 1 the values are the initial values
+          if (scorer === 1) {
+            pongPosition.x = boardWidth - boardWidth / 4;
+            pongVelocity.x = speed;
+          } else {
+            pongVelocity.x = -speed;
+          }
         }
       }
 
@@ -277,14 +286,16 @@ export default function Home() {
         if (pongPosition.x + pongSize >= boardWidth) {
           goal.play();
           player1Score++;
-          nextGame();
+          // Player 1 scored
+          nextGame(1);
         }
 
         // Left boundary
         else if (pongPosition.x <= 0) {
           goal.play();
           player2Score++;
-          nextGame();
+          // Player 2 scored
+          nextGame(2);
         }
 
         // Player 1
