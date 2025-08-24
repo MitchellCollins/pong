@@ -14,6 +14,7 @@ export default function Home() {
   const canvasRef = useRef();
   const [running, setRunning] = useState(false);
   const [winner, setWinner] = useState();
+  const [mode, setMode] = useState();
 
   // Global Constants
   const fps = 30;
@@ -67,14 +68,17 @@ export default function Home() {
         player1YVelocity = speed;
         break;
 
+      // These controls only work if mode is player
       // P Key
       case 80:
-        player2YVelocity = -speed;
+        if (mode === "player")
+          player2YVelocity = -speed;
         break;
 
       // L Key
       case 76:
-        player2YVelocity = speed;
+        if (mode === "player")
+          player2YVelocity = speed;
         break;
     }
   }
@@ -88,7 +92,8 @@ export default function Home() {
 
       // P or L Key
       case 80 || 76:
-        player2YVelocity = 0;
+        if (mode === "player")
+          player2YVelocity = 0;
         break;
     }
   }
@@ -189,6 +194,14 @@ export default function Home() {
         // Updates Pong
         pongPosition.x += pongVelocity.x;
         pongPosition.y += pongVelocity.y;
+
+        // Computer make decision if in mode "computer"
+        if (mode === "computer") {
+          const distance = pongPosition.y - player2YPosition;
+
+          // Determines required velocity to move player to pong y position
+          player2YVelocity = (distance > 0 ? speed : distance < 0 ? -speed : 0);
+        }
         
         draw();
 
@@ -336,43 +349,51 @@ export default function Home() {
       <canvas ref={canvasRef} width={boardWidth} height={boardHeight} style={{ backgroundColor: "#000" }} />
 
       {/* Start Menu */}
-      <div hidden={running || winner} style={{ position: "absolute", alignSelf: "center", textAlign: "center", color: "#fff" }}>
+      <div hidden={running || winner} className="menu">
         {/* Title */}
         <h1 style={{ marginTop: 0, marginBottom: 10, fontSize: 60 }}>Pong</h1>
-        
-        {/* Start Game Button */}
-        <button onClick={() => setRunning(true)} style={{  
-          fontSize: 20, 
-          padding: 10, 
-          border: "2px solid #fff",
-          backgroundColor: "inherit",
-          color: "inherit"
-        }}>
-          Start Game!
-        </button>
+
+        {mode ? (
+          // Start Game Button
+          <button onClick={() => setRunning(true)} className="menu-button">
+            Start Game!
+          </button>
+        ) : (
+          // Mode Selection
+          <div className="menu-buttons">
+            <button onClick={() => setMode("computer")} className="menu-button">
+              Computer
+            </button>
+
+            <button onClick={() => setMode("player")} className="menu-button">
+              2 Player
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Restart Menu */}
-      <div hidden={!winner} style={{ position: "absolute", alignSelf: "center", textAlign: "center", color: "#fff" }}>
+      <div hidden={!winner} className="menu">
         {/* Title */}
         <h1>Player {winner} won!</h1>
 
-        {/* Restart Game Button */}
-        <button 
-          onClick={() => { 
+        <div className="menu-buttons">
+          {/* Restart Game Button */}
+          <button className="menu-button" onClick={() => { 
             setWinner(); 
             setRunning(true) 
-          }} 
-          style={{  
-            fontSize: 20, 
-            padding: 10, 
-            border: "2px solid #fff",
-            backgroundColor: "inherit",
-            color: "inherit"
-          }}
-        >
-          Restart Game!
-        </button>
+          }}>
+            Restart Game!
+          </button>
+
+          {/* Quit To Menu Button */}
+          <button className="menu-button" onClick={() => {
+            setWinner();
+            setMode();
+          }}>
+            Quit to Menu
+          </button>
+        </div>
       </div>
     </div>
   );

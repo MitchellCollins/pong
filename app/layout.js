@@ -1,3 +1,5 @@
+import "./global.css";
+
 export const metadata = {
   title: "Pong",
   description: "Recreation of the pong game.",

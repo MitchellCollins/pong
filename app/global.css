@@ -1,0 +1,19 @@
+.menu {
+    position: absolute; 
+    align-self: center; 
+    text-align: center; 
+    color: #fff;
+}
+
+.menu-button {
+    font-size: 20px;
+    padding: 10px;
+    border: 2px solid #fff;
+    background-color: inherit;
+    color: inherit;
+}
+
+.menu-buttons {
+    display: flex; 
+    gap: 20px;
+}
