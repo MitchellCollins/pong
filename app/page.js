@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { VolumeOff, VolumeUp } from "@mui/icons-material";
+import { Pong } from "@/constructors/Pong";
+import { Player } from "@/constructors/Player";
 
 // Determines if is being runned in production
 const isProd = process.env.NODE_ENV === "production";
@@ -49,39 +51,52 @@ export default function Home() {
     })
   }
 
-  // Global Variables
-  let player1YPosition = initialValues.player1YPosition;
-  let player2YPosition = initialValues.player2YPosition;
-  let player1YVelocity = initialValues.player1YVelocity;
-  let player2YVelocity = initialValues.player2YVelocity;
-  let player1Score = initialValues.player1Score;
-  let player2Score = initialValues.player2Score;
-  let pongPosition = initialValues.getPongPosition();
-  let pongVelocity = initialValues.getPongVelocity();
+  const pong = new Pong({
+    position: initialValues.getPongPosition(),
+    speed: initialValues.getPongVelocity(),
+    maxSpeed: speed,
+    size: pongSize
+  });
+
+  const player1 = new Player({
+    position: { x: player1XPosition, y: initialValues.player1YPosition },
+    speed:  initialValues.player1YVelocity,
+    maxSpeed: speed,
+    height: playerHeight,
+    width: playerWidth
+  });
+
+  const player2 = new Player({
+    position: { x: player2XPosition, y: initialValues.player2YPosition },
+    speed: initialValues.player2YVelocity,
+    maxSpeed: speed,
+    height: playerHeight,
+    width: playerWidth
+  });
 
   function handleKeyDown(e) {
     switch (e.keyCode) {
       // W Key
       case 87:
-        player1YVelocity = -speed;
+        player1.speed = -speed;
         break;
 
       // S Key
       case 83:
-        player1YVelocity = speed;
+        player1.speed = speed;
         break;
 
       // These controls only work if mode is player
       // P Key
       case 80:
         if (mode === "player")
-          player2YVelocity = -speed;
+          player2.speed = -speed;
         break;
 
       // L Key
       case 76:
         if (mode === "player")
-          player2YVelocity = speed;
+          player2.speed = speed;
         break;
     }
   }
@@ -90,13 +105,13 @@ export default function Home() {
     switch (e.keyCode) {
       // W  or S Key
       case 87 || 83:
-        player1YVelocity = 0;
+        player1.speed = 0;
         break;
 
       // P or L Key
       case 80 || 76:
         if (mode === "player")
-          player2YVelocity = 0;
+          player2.speed = 0;
         break;
     }
   }
@@ -122,6 +137,12 @@ export default function Home() {
     
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
+
+    // Provides instances with context
+    // Used to draw itself
+    pong.context = context;
+    player1.context = context;
+    player2.context = context;
 
     // Audio
     const [beep, goal] = audios;
@@ -159,17 +180,11 @@ export default function Home() {
           window.addEventListener("keydown", handleKeyDown);
           window.addEventListener("keyup", handleKeyUp);
           
-          pongVelocity.x = -speed;
+          pong.speed.x = -speed;
 
           resolve();
         }, 3000);
       });
-    }
-
-    function drawPlayer(x, y) {
-      // Moves player up half its size
-      // So that position is relative to its center
-      context.fillRect(x, y - playerHeight / 2, playerWidth, playerHeight);
     }
 
     function draw() {
@@ -189,34 +204,30 @@ export default function Home() {
       context.stroke();
 
       // Scores
-      context.fillText(player1Score, boardWidth / 2 - 40, 30); // Player 1
-      context.fillText(player2Score, boardWidth / 2 + 40, 30); // Player 2
+      context.fillText(player1.score, boardWidth / 2 - 40, 30); // Player 1
+      context.fillText(player2.score, boardWidth / 2 + 40, 30); // Player 2 
+      
+      pong.draw();
 
-      // Pong
-      context.fillRect(pongPosition.x, pongPosition.y, pongSize, pongSize);
-
-      // Player 1
-      drawPlayer(player1XPosition, player1YPosition);
-      // Player 2
-      drawPlayer(player2XPosition, player2YPosition);
+      player1.draw();
+      player2.draw();
     }
 
     function game() {
       const loop = setInterval(() => {
-        // Updates Players
-        player1YPosition += player1YVelocity;
-        player2YPosition += player2YVelocity;
+        // Updates position based off speed
+        player1.update();
+        player2.update();
         
-        // Updates Pong
-        pongPosition.x += pongVelocity.x;
-        pongPosition.y += pongVelocity.y;
+        // Updates position based off speed
+        pong.update();
 
         // Computer make decision if in mode "computer"
         if (mode === "computer") {
-          const distance = pongPosition.y - player2YPosition;
+          const distance = pong.position.y - player2.position.y;
 
           // Determines required velocity to move player to pong y position
-          player2YVelocity = (distance > 0 ? speed : distance < 0 ? -speed : 0);
+          player2.speed = (distance > 0 ? speed : distance < 0 ? -speed : 0);
         }
         
         draw();
@@ -234,29 +245,30 @@ export default function Home() {
 
       function nextGame(scorer) {
         // Checks if someone has won
-        if (player1Score >= maxScore)
+        if (player1.score >= maxScore)
           finishGame(1);
 
-        else if (player2Score >= maxScore)
+        else if (player2.score >= maxScore)
           finishGame(2);
         
         // If no winner then next game is setup
         else {
-          player1YPosition = initialValues.player1YPosition;
-          player2YPosition = initialValues.player2YPosition;
-          player1YVelocity = initialValues.player1YVelocity;
-          player2YVelocity = initialValues.player2YVelocity;
-          pongPosition = initialValues.getPongPosition();
-          pongVelocity = initialValues.getPongVelocity();
+          player1.position.y = initialValues.player1YPosition;
+          player2.position.y = initialValues.player2YPosition;
+          player1.speed = initialValues.player1YVelocity;
+          player2.speed = initialValues.player2YVelocity;
+
+          pong.position = initialValues.getPongPosition();
+          pong.speed = initialValues.getPongVelocity();
           
           // Checks if player 1 scored
           // Only need to change pong position for player 2
           // As for player 1 the values are the initial values
           if (scorer === 1) {
-            pongPosition.x = boardWidth - boardWidth / 4;
-            pongVelocity.x = speed;
+            pong.position.x = boardWidth - boardWidth / 4;
+            pong.speed.x = speed;
           } else {
-            pongVelocity.x = -speed;
+            pong.speed.x = -speed;
           }
         }
       }
@@ -265,39 +277,39 @@ export default function Home() {
         beep.play();
         
         // Reflects x velocity
-        pongVelocity.x *= -1;
+        pong.speed.x *= -1;
         // Update pong y velocity based off player y velocity 
-        pongVelocity.y += playerVelocity;
+        pong.speed.y += playerVelocity;
         
         // Caps pong y velocity to speed constant
         // Checks if velocity is positive
         if (playerVelocity > 0) {
-          pongVelocity.y = Math.min(speed, playerVelocity);
+          pong.speed.y = Math.min(speed, playerVelocity);
         } else {
           // Handles negative velocity
-          pongVelocity.y = Math.max(-speed, playerVelocity);
+          pong.speed.y = Math.max(-speed, playerVelocity);
         }
       }
 
       function playerYCollisionHandler(position, velocity) {
         // Checks if pong hits front side
-        if (pongPosition.y + pongSize <= position + playerHeight / 2 && pongPosition.y >= position - playerHeight / 2) {
+        if (pong.position.y + pongSize <= position + playerHeight / 2 && pong.position.y >= position - playerHeight / 2) {
           pongCollidedPlayer(velocity);
         }
 
         // Checks if pong hits top side
-        else if (pongPosition.y <= position - playerHeight / 2 && pongPosition.y + pongSize >= position - playerHeight / 2) {
+        else if (pong.position.y <= position - playerHeight / 2 && pong.position.y + pongSize >= position - playerHeight / 2) {
           // Positions pong outside of player
-          pongPosition.y = position - playerHeight / 2 - pongSize - 1;
-          pongVelocity.y *= -1;
+          pong.position.y = position - playerHeight / 2 - pongSize - 1;
+          pong.speed.y *= -1;
 
           pongCollidedPlayer(velocity);
         }
 
         // Checks if pong hits bottom side
-        else if (pongPosition.y <= position + playerHeight / 2 && pongPosition.y + pongSize > position - playerHeight / 2) {
-          pongPosition.y = position + playerHeight / 2 + 1;
-          pongVelocity.y *= -1;
+        else if (pong.position.y <= position + playerHeight / 2 && pong.position.y + pongSize > position - playerHeight / 2) {
+          pong.position.y = position + playerHeight / 2 + 1;
+          pong.speed.y *= -1;
           
           pongCollidedPlayer(velocity);
         }
@@ -306,47 +318,47 @@ export default function Home() {
       function collisionHandling() {
         // Checks Collisions
         // Checks if pong is within x window of player 1
-        if (pongPosition.x <= player1XPosition + playerWidth && pongPosition.x + pongSize >= player1XPosition)
-          playerYCollisionHandler(player1YPosition, player1YVelocity);
+        if (pong.position.x <= player1XPosition + playerWidth && pong.position.x + pongSize >= player1XPosition)
+          playerYCollisionHandler(player1.position.y, player1.speed);
 
         // Checks if pong is within x window of player 2
-        else if (pongPosition.x <= player2XPosition && pongPosition.x + pongSize > player2XPosition)
-          playerYCollisionHandler(player2YPosition, player2YVelocity);
+        else if (pong.position.x <= player2XPosition && pong.position.x + pongSize > player2XPosition)
+          playerYCollisionHandler(player2.position.y, player2.speed);
 
         // Top and bottom boundaries
-        else if (pongPosition.y <= 0 || pongPosition.y + pongSize >= boardHeight) {
+        else if (pong.position.y <= 0 || pong.position.y + pongSize >= boardHeight) {
           beep.play();
-          pongVelocity.y *= -1;
+          pong.speed.y *= -1;
         }
 
         // Right boundary
-        if (pongPosition.x + pongSize >= boardWidth) {
+        if (pong.position.x + pongSize >= boardWidth) {
           goal.play();
-          player1Score++;
+          player1.score++;
           // Player 1 scored
           nextGame(1);
         }
 
         // Left boundary
-        else if (pongPosition.x <= 0) {
+        else if (pong.position.x <= 0) {
           goal.play();
-          player2Score++;
+          player2.score++;
           // Player 2 scored
           nextGame(2);
         }
 
         // Player 1
-        if (player1YPosition - playerHeight / 2 <= 0) {
-          player1YPosition = playerHeight / 2;
-        } else if (player1YPosition + playerHeight / 2 >= boardHeight) {
-          player1YPosition = boardHeight - playerHeight / 2;
+        if (player1.position.y - playerHeight / 2 <= 0) {
+          player1.position.y = playerHeight / 2;
+        } else if (player1.position.y + playerHeight / 2 >= boardHeight) {
+          player1.position.y = boardHeight - playerHeight / 2;
         }
 
         // Player 2
-        if (player2YPosition - playerHeight / 2 <= 0) {
-          player2YPosition = playerHeight / 2;
-        } else if (player2YPosition + playerHeight / 2 >= boardHeight) {
-          player2YPosition = boardHeight - playerHeight / 2;
+        if (player2.position.y - playerHeight / 2 <= 0) {
+          player2.position.y = playerHeight / 2;
+        } else if (player2.position.y + playerHeight / 2 >= boardHeight) {
+          player2.position.y = boardHeight - playerHeight / 2;
         }
       }
     }
