@@ -17,3 +17,10 @@
     display: flex; 
     gap: 20px;
 }
+
+#mute-button {
+    position: absolute;
+    padding: 0px;
+    background-color: inherit;
+    border: 0px;
+}

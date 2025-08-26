@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react";
+import { VolumeOff, VolumeUp } from "@mui/icons-material";
 
 // Determines if is being runned in production
 const isProd = process.env.NODE_ENV === "production";
@@ -15,6 +16,8 @@ export default function Home() {
   const [running, setRunning] = useState(false);
   const [winner, setWinner] = useState();
   const [mode, setMode] = useState();
+  const [mute, setMute] = useState(false);
+  const [audios, setAudios] = useState([]);
 
   // Global Constants
   const fps = 30;
@@ -98,17 +101,30 @@ export default function Home() {
     }
   }
 
+  // Loads Audio files
   useEffect(() => {
-    if (!canvasRef.current) return null;
+    setAudios([
+      new Audio(resolveSRCPath("/pong_beep.wav")),
+      new Audio(resolveSRCPath("/pong_goal.wav"))
+    ]);
+  }, []);
+
+  // Mute/Unmute Audio when mute state changes
+  useEffect(() => {
+    setAudios((prevAudios) => prevAudios.map((audio) => {
+      audio.muted = mute;
+      return audio;
+    }));
+  }, [mute]);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
     
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
 
     // Audio
-    const beep = new Audio(resolveSRCPath("/pong_beep.wav"));
-    beep.volume = 0.3;
-    const goal = new Audio(resolveSRCPath("/pong_goal.wav"));
-    goal.volume = 0.6;
+    const [beep, goal] = audios;
 
     function setTextOptions() {
       context.fillStyle = "#fff";
@@ -247,7 +263,7 @@ export default function Home() {
 
       function pongCollidedPlayer(playerVelocity) {
         beep.play();
-
+        
         // Reflects x velocity
         pongVelocity.x *= -1;
         // Update pong y velocity based off player y velocity 
@@ -347,6 +363,11 @@ export default function Home() {
   return (
     <div style={{ display: "flex", justifyContent: "center" }}>
       <canvas ref={canvasRef} width={boardWidth} height={boardHeight} style={{ backgroundColor: "#000" }} />
+
+      {/* Mute Button */}
+      <button id="mute-button" onClick={() => setMute(!mute)}>
+        {mute ? <VolumeOff htmlColor="#fff" /> : <VolumeUp htmlColor="#fff" />}
+      </button>
 
       {/* Start Menu */}
       <div hidden={running || winner} className="menu">
