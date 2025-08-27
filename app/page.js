@@ -26,6 +26,7 @@ export default function Home() {
   const boardWidth = 1000;
   const boardHeight = 600;
   const speed = 8;
+  const pongSpeedMultiplier = 1.4;
   const playerWidth = 10;
   const playerHeight = 60;
   const player1XPosition = boardWidth / 10;
@@ -54,7 +55,7 @@ export default function Home() {
   const pong = new Pong({
     position: initialValues.getPongPosition(),
     speed: initialValues.getPongVelocity(),
-    maxSpeed: speed,
+    maxSpeed: speed * pongSpeedMultiplier,
     size: pongSize
   });
 
@@ -180,7 +181,7 @@ export default function Home() {
           window.addEventListener("keydown", handleKeyDown);
           window.addEventListener("keyup", handleKeyUp);
           
-          pong.speed.x = -speed;
+          pong.speed.x = -speed * pongSpeedMultiplier;
 
           resolve();
         }, 3000);
@@ -266,9 +267,9 @@ export default function Home() {
           // As for player 1 the values are the initial values
           if (scorer === 1) {
             pong.position.x = boardWidth - boardWidth / 4;
-            pong.speed.x = speed;
+            pong.speed.x = speed * pongSpeedMultiplier;
           } else {
-            pong.speed.x = -speed;
+            pong.speed.x = -speed * pongSpeedMultiplier;
           }
         }
       }
@@ -278,17 +279,8 @@ export default function Home() {
         
         // Reflects x velocity
         pong.speed.x *= -1;
-        // Update pong y velocity based off player y velocity 
-        pong.speed.y += playerVelocity;
-        
-        // Caps pong y velocity to speed constant
-        // Checks if velocity is positive
-        if (playerVelocity > 0) {
-          pong.speed.y = Math.min(speed, playerVelocity);
-        } else {
-          // Handles negative velocity
-          pong.speed.y = Math.max(-speed, playerVelocity);
-        }
+
+        pong.limitYSpeed(playerVelocity);
       }
 
       function playerYCollisionHandler(position, velocity) {
