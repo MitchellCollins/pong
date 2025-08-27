@@ -317,10 +317,22 @@ export default function Home() {
         else if (pong.position.x <= player2XPosition && pong.position.x + pongSize > player2XPosition)
           playerYCollisionHandler(player2.position.y, player2.speed);
 
-        // Top and bottom boundaries
-        else if (pong.position.y <= 0 || pong.position.y + pongSize >= boardHeight) {
+        // Top boundaries
+        else if (pong.position.y <= 0) {
           beep.play();
           pong.speed.y *= -1;
+
+          // Positions pong outside of boundary
+          pong.position.y = 1;
+        }
+
+        // Bottom boundary
+        else if (pong.position.y + pongSize >= boardHeight) {
+          beep.play();
+          pong.speed.y *= -1;
+
+          // Positions pong outside of boundary
+          pong.position.y = boardHeight - pong.size - 1;
         }
 
         // Right boundary
